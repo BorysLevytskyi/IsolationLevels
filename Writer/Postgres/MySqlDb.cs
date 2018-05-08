@@ -8,6 +8,8 @@ namespace Writer.Postgres
 {
     public class MySqlDb : IDatabaseProvider
     {
+        public string Name => "MySql 5.7";
+        
         private static async Task<MySqlConnection> GetOpenConnection()
         {
             var con = new MySqlConnection("Server=localhost;uid=root;Pwd=123; Database=testdb;Port=3306;sslmode=none;Allow User Variables=True");
@@ -28,10 +30,10 @@ namespace Writer.Postgres
                                 BeginTime time NOT NULL,
                                 EndTime time NOT NULL,
                                 Owner varchar(100));");
-
+            await c.ExecuteAsync("CREATE INDEX ix_Booking_room ON Bookings(RoomId)");
         }
 
-        public async Task ExecuteTransaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
+        public async Task Transaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
         {
             if (delay != null)
             {

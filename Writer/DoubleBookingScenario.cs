@@ -8,18 +8,18 @@ namespace Writer
 {
     public static class DoubleBookingScenario
     {
-        public static async Task Definition(SetupAction preStart, ExecuteAction execute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        public static async Task Definition(IDatabaseProvider db, IsolationLevel isolationLevel)
         {
-             await preStart();
+             await db.ResetDatabase();
 
             Console.WriteLine($"DoubleBookingScenario: {isolationLevel}");
 
-            Task OnBeforeCommitOf(string actor) => execute(a => a.PrintBookings($"Before commit owner {actor}: "));
+            Task OnBeforeCommitOf(string actor) => db.Transaction(a => a.PrintBookings($"Before commit owner {actor}: "));
 
             ManualResetEventSlim evt = new ManualResetEventSlim(false);
 
-            var t1 = execute(BookingRoutineFor(evt, 1, "Borys", "12:00", "13:00", OnBeforeCommitOf), isolationLevel);
-            var t2 = execute(BookingRoutineFor(evt, 2, "John", "12:59", "13:30", OnBeforeCommitOf), isolationLevel);
+            var t1 = db.Transaction(BookingFlow(evt, 1, "Borys", "12:00", "13:00", OnBeforeCommitOf), isolationLevel);
+            var t2 = db.Transaction(BookingFlow(evt, 2, "John", "12:59", "13:30", OnBeforeCommitOf), isolationLevel);
 
             Console.WriteLine("Setting event...");
             evt.Set();
@@ -28,10 +28,10 @@ namespace Writer
 
             Console.WriteLine();
             Console.WriteLine("Result:");
-            await execute(u => u.PrintBookings("Final Read: "));
+            await db.Transaction(u => u.PrintBookings("Final Read: "));
         }
 
-        private static Func<Actor, Task> BookingRoutineFor(
+        private static Func<Actor, Task> BookingFlow(
             ManualResetEventSlim start, 
             int roomId, 
             string owner, 
@@ -77,7 +77,7 @@ namespace Writer
 
                     await actor.BookRoom(roomId, starTime, endTime, owner, Print);
 
-                    Print("Room is booked");
+                    Print($"Room #{roomId} is booked");
 
                     await onBeforeCommitOf(owner);
 

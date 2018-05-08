@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
+using Google.Protobuf.WellKnownTypes;
 using Writer.Postgres;
 using Npgsql;
 using Console = System.Console;
@@ -15,18 +19,16 @@ namespace Writer
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Started");
-
             try
             {
-                var isolationLevel = IsolationLevel.ReadCommitted;
+                var isolationLevel = IsolationLevel.Serializable;
                 var scenario = GetScenario();
-                Console.WriteLine("------- MySql -----------------------------------");
-                RunMysql(scenario, isolationLevel).GetAwaiter().GetResult();
-                Console.WriteLine();
-                Console.WriteLine("------ Postgres -----------------------------------");
-                RunPostgres(scenario, isolationLevel).GetAwaiter().GetResult();
-
+                foreach (var db in GetDatabaseProviders(args.First()))
+                {
+                    Console.WriteLine($"------- {db.Name} -----------------------------------");
+                    scenario(db, isolationLevel).GetAwaiter().GetResult();
+                }
+                
                 Console.WriteLine("Done");
             }
             catch (Exception e)
@@ -35,21 +37,31 @@ namespace Writer
             }
         }
 
-        private static async Task RunPostgres(ScenarioAction run, IsolationLevel isolationLevel)
-        {
-            var p = new PostgresDb();
-            await run(p.ResetDatabase, p.ExecuteTransaction, isolationLevel);
-        }
-
-        private static async Task RunMysql(ScenarioAction run, IsolationLevel isolationLevel)
-        {
-            var mysql = new MySqlDb();
-            await run(mysql.ResetDatabase, mysql.ExecuteTransaction, isolationLevel);
-        }
-
         private static ScenarioAction GetScenario()
         {
             return DoubleBookingScenario.Definition;
+        }
+
+        private static IEnumerable<IDatabaseProvider> GetDatabaseProviders(string filter)
+        {
+            var pg = new PostgresDb();
+            var msql = new MySqlDb();
+
+            if (!string.IsNullOrEmpty(filter))
+            {
+                switch (filter)
+                {
+                    case "m": 
+                        yield return msql;
+                        yield break;
+                    case "p": 
+                        yield return pg;
+                        yield break;   
+                }
+            }
+
+            yield return msql;
+            yield return pg;
         }
     }
 }

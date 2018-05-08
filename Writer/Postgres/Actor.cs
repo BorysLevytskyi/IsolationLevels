@@ -46,6 +46,7 @@ namespace Writer.Postgres
                 "SELECT Owner FROM Bookings WHERE RoomId = @RoomId AND BeginTime BETWEEN @begin AND @end OR EndTime BETWEEN @begin AND @end",
                 new
                 {
+                    roomId,
                     begin = TimeSpan.Parse(startTime),
                     end = TimeSpan.Parse(endTime),
                 },
@@ -59,7 +60,7 @@ namespace Writer.Postgres
 
         public async Task PrintBookings(string prefix = null, TextWriter writer = null)
         {
-            var bookings = await Connection.QueryAsync("SELECT * FROM Bookings", Transaction);
+            var bookings = (await Connection.QueryAsync("SELECT * FROM Bookings", Transaction)).ToList();
             writer = writer ?? Console.Out;
 
             writer.WriteLine(bookings.Any()

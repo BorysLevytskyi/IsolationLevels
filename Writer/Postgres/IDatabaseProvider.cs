@@ -6,7 +6,10 @@ namespace Writer.Postgres
 {
     public interface IDatabaseProvider
     {
+        string Name { get; }
+        
         Task ResetDatabase();
-        Task ExecuteTransaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null);
+        
+        Task Transaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null);
     }
 }
