@@ -4,18 +4,18 @@ using System.Threading.Tasks;
 using Dapper;
 using MySql.Data.MySqlClient;
 
-namespace Db.IsolationLevels.Postgres
+namespace Writer.Postgres
 {
-    public static class MySqlDb
+    public class MySqlDb : IDatabaseProvider
     {
-        public static async Task<MySqlConnection> GetOpenConnection()
+        private static async Task<MySqlConnection> GetOpenConnection()
         {
             var con = new MySqlConnection("Server=localhost;uid=root;Pwd=123; Database=testdb;Port=3306;sslmode=none;Allow User Variables=True");
             await con.OpenAsync();
             return con;
         }
 
-        public static async Task Seed()
+        public async Task ResetDatabase()
         {
             var c = await GetOpenConnection();
             await c.ExecuteAsync("DROP TABLE IF EXISTS testdb.Bookings");
@@ -31,7 +31,7 @@ namespace Db.IsolationLevels.Postgres
 
         }
 
-        public static async Task Execute(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
+        public async Task ExecuteTransaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
         {
             if (delay != null)
             {

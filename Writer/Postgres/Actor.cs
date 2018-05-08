@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 
-namespace Db.IsolationLevels.Postgres
+namespace Writer.Postgres
 {
     public class Actor
     {

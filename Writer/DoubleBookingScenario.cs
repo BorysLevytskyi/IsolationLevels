@@ -1,58 +1,18 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using Dapper;
-using Db.IsolationLevels.Postgres;
-using Npgsql;
-using Console = System.Console;
-using static Db.IsolationLevels.Times;
-// ReSharper disable InconsistentNaming
+using Writer.Postgres;
 
-namespace Db.IsolationLevels
+namespace Writer
 {
-    partial class Program
+    public static class DoubleBookingScenario
     {
-        static object _lock = new object();
-
-        static void Main(string[] args)
+        public static async Task Definition(SetupAction preStart, ExecuteAction execute, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
-            Console.WriteLine("Started");
+             await preStart();
 
-            try
-            {
-                var isolationLevel = IsolationLevel.ReadCommitted;
-
-                Console.WriteLine("------- MySql -----------------------------------");
-                RunMysql(isolationLevel).GetAwaiter().GetResult();
-                Console.WriteLine();
-                Console.WriteLine("------ Postgres -----------------------------------");
-                RunPostgres(isolationLevel).GetAwaiter().GetResult();
-
-                Console.WriteLine("Done");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
-
-        public static async Task RunPostgres(IsolationLevel isolationLevel)
-        {
-            await RunDatabaseTest(PostgresDb.Seed, PostgresDb.Execute, isolationLevel);
-        }
-
-        public static async Task RunMysql(IsolationLevel isolationLevel)
-        {
-            await RunDatabaseTest(MySqlDb.Seed, MySqlDb.Execute, isolationLevel);
-        }
-
-        private static async Task RunDatabaseTest(Func<Task> seed, ExecuteDelegate execute, IsolationLevel isolationLevel)
-        {
-            await seed();
-
-
-            Console.WriteLine($"Test: {isolationLevel}");
+            Console.WriteLine($"DoubleBookingScenario: {isolationLevel}");
 
             Task OnBeforeCommitOf(string actor) => execute(a => a.PrintBookings($"Before commit owner {actor}: "));
 
@@ -68,10 +28,10 @@ namespace Db.IsolationLevels
 
             Console.WriteLine();
             Console.WriteLine("Result:");
-            await PostgresDb.Execute(u => u.PrintBookings("Final Read: "));
+            await execute(u => u.PrintBookings("Final Read: "));
         }
 
-        public static Func<Actor, Task> BookingRoutineFor(
+        private static Func<Actor, Task> BookingRoutineFor(
             ManualResetEventSlim start, 
             int roomId, 
             string owner, 
@@ -101,7 +61,7 @@ namespace Db.IsolationLevels
                         Thread.Sleep(startDelay.Value);
                     }
 
-                    Print("Check avaiable bookings");
+                    Print("Check available bookings");
 
                     var o = await actor.GetExistingBookingOwnerIfAny(roomId, starTime, endTime);
 
@@ -111,9 +71,9 @@ namespace Db.IsolationLevels
                         return;
                     }
 
-                    Print("Booking is avaiable");
+                    Print("Booking is availble");
 
-                    await actor.Sleep(TimeSpan.FromSeconds(2));
+                    await actor.Sleep(2.Sec());
 
                     await actor.BookRoom(roomId, starTime, endTime, owner, Print);
 
@@ -121,7 +81,7 @@ namespace Db.IsolationLevels
 
                     await onBeforeCommitOf(owner);
 
-                    await Task.Delay(_2sec);
+                    await Task.Delay(2.Sec());
 
                     Print("Commiting transaction...");
                 
@@ -135,5 +95,7 @@ namespace Db.IsolationLevels
                 }
             };
         }
+
+        private static readonly object _lock = new object();
     }
 }

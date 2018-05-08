@@ -1,22 +1,21 @@
 ﻿using System;
 using System.Data;
-using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Npgsql;
 
-namespace Db.IsolationLevels.Postgres
+namespace Writer.Postgres
 {
-    public static class PostgresDb
+    public class PostgresDb : IDatabaseProvider
     {
-        public static async Task<NpgsqlConnection> GetOpenConnection()
+        private async Task<NpgsqlConnection> GetOpenConnection()
         {
             var con = new NpgsqlConnection("Host=localhost;User ID=admin;Password=123; Database=testdb");
             await con.OpenAsync();
             return con;
         }
 
-        public static async Task Seed()
+        public async Task ResetDatabase()
         {
             var c = await GetOpenConnection();
             await c.ExecuteAsync("DROP TABLE IF EXISTS public.Bookings");
@@ -32,7 +31,7 @@ namespace Db.IsolationLevels.Postgres
 
         }
 
-        public static async Task Execute(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
+        public async Task ExecuteTransaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
         {
             if (delay != null)
             {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Db.IsolationLevels
+namespace Writer
 {
     public static class Times
     {
