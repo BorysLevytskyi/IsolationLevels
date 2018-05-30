@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Dapper;
 using Npgsql;
 
-namespace Writer.Postgres
+namespace Writer.DbProviders
 {
     public class PostgresDb : IDatabaseProvider
     {
@@ -34,7 +34,7 @@ namespace Writer.Postgres
 
         }
 
-        public async Task Transaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
+        public async Task Transaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null, string actorName = null)
         {
             if (delay != null)
             {
@@ -47,7 +47,7 @@ namespace Writer.Postgres
                 {
                     using (var tran = con.BeginTransaction(isolationLevel))
                     {
-                        var actor = new Actor(con, tran);
+                        var actor = new PostgresActor(actorName ?? "PostgresActor", con, tran);
                         await transactionContent(actor);
                     }
                 }

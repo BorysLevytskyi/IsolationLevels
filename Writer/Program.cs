@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using Google.Protobuf.WellKnownTypes;
-using Writer.Postgres;
 using Npgsql;
+using Writer.DbProviders;
 using Console = System.Console;
 using static Writer.Times;
 // ReSharper disable InconsistentNaming
@@ -39,7 +39,8 @@ namespace Writer
 
         private static ScenarioAction GetScenario()
         {
-            return DoubleBookingScenario.Definition;
+            //return DoubleBookingScenario.Definition;
+            return RepeatableReadScenario.Definition;
         }
 
         private static IEnumerable<IDatabaseProvider> GetDatabaseProviders(string filter)
@@ -52,9 +53,11 @@ namespace Writer
                 switch (filter)
                 {
                     case "m": 
+                    case "my":
                         yield return msql;
                         yield break;
                     case "p": 
+                    case "pg":
                         yield return pg;
                         yield break;   
                 }

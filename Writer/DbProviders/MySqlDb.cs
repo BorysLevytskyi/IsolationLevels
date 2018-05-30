@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Dapper;
 using MySql.Data.MySqlClient;
 
-namespace Writer.Postgres
+namespace Writer.DbProviders
 {
     public class MySqlDb : IDatabaseProvider
     {
@@ -33,7 +33,7 @@ namespace Writer.Postgres
             await c.ExecuteAsync("CREATE INDEX ix_Booking_room ON Bookings(RoomId)");
         }
 
-        public async Task Transaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null)
+        public async Task Transaction(Func<Actor, Task> transactionContent, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted, TimeSpan? delay = null, string actorName = null)
         {
             if (delay != null)
             {
@@ -46,7 +46,7 @@ namespace Writer.Postgres
                 {
                     using (var tran = con.BeginTransaction(isolationLevel))
                     {
-                        var actor = new Actor(con, tran);
+                        var actor = new MySqlActor(actorName ?? "MySqlActor", con, tran);
                         await transactionContent(actor);
                     }
                 }

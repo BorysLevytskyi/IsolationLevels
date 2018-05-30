@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using System.Threading.Tasks;
-using Writer.Postgres;
+using Writer.DbProviders;
 
 namespace Writer
 {

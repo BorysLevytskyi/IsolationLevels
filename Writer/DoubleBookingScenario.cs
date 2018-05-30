@@ -2,7 +2,7 @@ using System;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using Writer.Postgres;
+using Writer.DbProviders;
 
 namespace Writer
 {
@@ -18,8 +18,8 @@ namespace Writer
 
             ManualResetEventSlim evt = new ManualResetEventSlim(false);
 
-            var t1 = db.Transaction(BookingFlow(evt, 1, "Borys", "12:00", "13:00", OnBeforeCommitOf), isolationLevel);
-            var t2 = db.Transaction(BookingFlow(evt, 2, "John", "12:59", "13:30", OnBeforeCommitOf), isolationLevel);
+            var t1 = db.Transaction(BookingFlow(evt, 1, "Borys", "12:00", "13:00", OnBeforeCommitOf), isolationLevel, actorName: "Borys");
+            var t2 = db.Transaction(BookingFlow(evt, 2, "John", "12:59", "13:30", OnBeforeCommitOf), isolationLevel, actorName: "John");
 
             Console.WriteLine("Setting event...");
             evt.Set();
@@ -38,18 +38,11 @@ namespace Writer
             string starTime, 
             string endTime, 
             Func<string, Task> onBeforeCommitOf, 
-            TimeSpan? startDelay = null)
+            TimeSpan? startDelay = null,
+            string name = null)
         {
             return async actor =>
             {
-                void Print(string message)
-                {
-                    lock (_lock)
-                    {
-                        Console.WriteLine($"{owner}: {message}");
-                    }
-                }
-
                 await Task.Yield(); // Important before waiting for an event
 
                 start.Wait();
@@ -61,37 +54,37 @@ namespace Writer
                         Thread.Sleep(startDelay.Value);
                     }
 
-                    Print("Check available bookings");
+                    actor.Print("Check available bookings");
 
                     var o = await actor.GetExistingBookingOwnerIfAny(roomId, starTime, endTime);
 
                     if (o != null)
                     {
-                        Print($"Booking for #{roomId} room is owner by {o}. Cannot book.");
+                        actor.Print($"Booking for #{roomId} room is owner by {o}. Cannot book.");
                         return;
                     }
 
-                    Print("Booking is availble");
+                    actor.Print("Booking is availble");
 
                     await actor.Sleep(2.Sec());
 
-                    await actor.BookRoom(roomId, starTime, endTime, owner, Print);
+                    await actor.BookRoom(roomId, starTime, endTime, owner);
 
-                    Print($"Room #{roomId} is booked");
+                    actor.Print($"Room #{roomId} is booked");
 
                     await onBeforeCommitOf(owner);
 
                     await Task.Delay(2.Sec());
 
-                    Print("Commiting transaction...");
+                    actor.Print("Commiting transaction...");
                 
-                    actor.CommitTransaction(Print);
+                    actor.CommitTransaction();
 
-                    Print("Success");
+                    actor.Print("Success");
                 }
                 catch (Exception ex)
                 {
-                    Print($"Aborted: {ex.Message}");
+                    actor.Print($"Aborted: {ex.Message}");
                 }
             };
         }
