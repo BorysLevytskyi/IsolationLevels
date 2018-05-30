@@ -32,7 +32,7 @@ namespace Writer.DbProviders
             }
         }
 
-        public Task<Booking> BookRoom(int roomId = 1, string startTime = "12:00", string endTime = "13:00", string owner = "DefaultOwner")
+        public Task<Booking> BookRoom(int roomId = 1, string startTime = "12:00", string endTime = "13:00", string owner = null)
         {
             try
             {
@@ -45,7 +45,7 @@ namespace Writer.DbProviders
                         roomId,
                         begin = TimeSpan.Parse(startTime),
                         end = TimeSpan.Parse(endTime),
-                        owner
+                        owner = owner ?? Name
                     },
                     Transaction);
             }
@@ -79,8 +79,8 @@ namespace Writer.DbProviders
             var bookings = (await Connection.QueryAsync("SELECT * FROM Bookings", Transaction)).ToList();
             
             Print(bookings.Any()
-                ? $"{prefix}{string.Join(Environment.NewLine, bookings)}"
-                : $"{prefix}No bookings at this time. IsolationLevel={Transaction.IsolationLevel}");
+                ? $"{prefix}\n{string.Join(Environment.NewLine, bookings)}"
+                : $"{prefix}\nNo bookings at this time. IsolationLevel={Transaction.IsolationLevel}");
         }
 
         public void CommitTransaction(Action<string> report = null) 
@@ -97,5 +97,10 @@ namespace Writer.DbProviders
         }
 
         protected abstract string GetNewBookingSql();
+
+        public Task DeleteBooking(int bookingId)
+        {
+            return Connection.ExecuteAsync("DELETE FROM Bookings WHERE Id = @bookingId", new {bookingId});
+        }
     }
 }

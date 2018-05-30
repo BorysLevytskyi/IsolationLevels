@@ -1,3 +1,5 @@
+using System;
+
 namespace Writer.Entities
 {
     public class Booking

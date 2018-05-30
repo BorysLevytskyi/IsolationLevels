@@ -12,7 +12,8 @@ namespace Writer.DbProviders
         {
             return @"INSERT INTO Bookings (RoomId, BeginTime, EndTime, Owner) 
                     VALUES (@roomId, @begin, @end, @owner);
-                    SELECT Id, RoomId, BeginTime, EndTime, Owner FROM Bookings WHERE Id = last_insert_id()";
+                    #SELECT last_insert_id() as Id
+                    SELECT Id, RoomId, cast(BeginTime as char) as BeginTime, cast(EndTime as char) as EndTime, Owner FROM Bookings WHERE Id = last_insert_id()";
         }
     }
 }
